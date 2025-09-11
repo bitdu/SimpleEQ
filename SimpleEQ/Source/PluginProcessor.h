@@ -11,8 +11,17 @@
 #include <JuceHeader.h>
 
 //==============================================================================
-/**
-*/
+
+struct ChainSettings
+{
+    float peakFreq{ 0 }, peakGainInDecibels{ 0 }, peakQuality{ 1.f };
+    float lowCutFreq{ 0 }, highCutFreq{ 0 };
+    int  lowCutSlope{ 0 }, highCutSlope{ 0 };
+};
+
+ChainSettings getChainSetting(juce::AudioProcessorValueTreeState& apvts);
+
+
 class SimpleEQAudioProcessor : public juce::AudioProcessor
 {
 public:
@@ -53,20 +62,27 @@ public:
     void getStateInformation(juce::MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
 
-	static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     // Audio Processor Value Tree State
-    juce::AudioProcessorValueTreeState apvts {*this, nullptr, "Parameters", createParameterLayout()};
+    juce::AudioProcessorValueTreeState apvts{ *this, nullptr, "Parameters", createParameterLayout() };
 
 private:
 
-	using Filter = juce::dsp::IIR::Filter<float>;
+    using Filter = juce::dsp::IIR::Filter<float>;
 
-	using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
+    using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
 
-	using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
+    using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
 
     MonoChain leftChain, rightChain;
+
+    enum ChainPositions 
+    {
+        LowCut,
+        Peak,
+        HighCut
+    };
 
 
     //==============================================================================
