@@ -28,7 +28,7 @@ struct ChainSettings
     Slope lowCutSlope { Slope::Slope_12 }, highCutSlope{ Slope::Slope_12};
 };
 
-ChainSettings getChainSetting(juce::AudioProcessorValueTreeState& apvts);
+ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
 
 
 class SimpleEQAudioProcessor : public juce::AudioProcessor
@@ -93,12 +93,50 @@ private:
         HighCut
     };
 
-	void updatePeakFilter(const ChainSettings& chainSettings);
+	//refactoring update functions
 
-    //helper functions to update coefficients
+	void updatePeakFilter(const ChainSettings& chainSettings);
     using Coefficients = Filter::CoefficientsPtr;
     static void updateCoefficients(Coefficients& old, const Coefficients& replacements);
 
+    template<int Index, typename ChainType, typename CoefficientType>
+    void update(ChainType& chain, const CoefficientType& coefficients)
+    {
+		updateCoefficients(chain.template get<Index>().coefficients, coefficients[Index]);
+		chain.template setBypassed<Index>(false);
+    }
+
+    template<typename ChainType, typename CoefficientType>
+    void updateCutFilter(ChainType& leftLowCut,
+                            const CoefficientType& coefficients,
+                            const Slope& lowCutSlope)
+    {
+        leftLowCut.template setBypassed<0>(true);
+        leftLowCut.template setBypassed<1>(true);
+        leftLowCut.template setBypassed<2>(true);
+        leftLowCut.template setBypassed<3>(true);
+
+        switch( lowCutSlope )
+        {
+            case Slope_48:
+            {
+                update<3>(leftLowCut, coefficients);
+            }
+            case Slope_36:
+            {
+                update<2>(leftLowCut, coefficients);
+            }
+            case Slope_24:
+            {
+                update<1>(leftLowCut, coefficients);
+            }
+            case Slope_12:
+            {
+                update<0>(leftLowCut, coefficients);
+            }
+        }
+    }
+    
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessor)
 
